@@ -1,4 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using System.Text.Json;
+using static System.Environment;
+using static System.IO.Path;
+using Microsoft.Data.SqlClient;
 using System.Data; //To use SqlConnection and so on.
 ConfigureConsole();
 #region Set up the connection string builder
@@ -161,5 +164,9 @@ WriteLine(horizontalLine);
 #endregion
 OutputStatistics(connection);
 await reader.CloseAsync();
-if (key is ConsoleKey)
+if (key is ConsoleKey.D2 or ConsoleKey.NumPad2)
+{
+    WriteLine($"Output count: {p2.Value}");
+    WriteLine($"Return value: {p3.Value}");
+}
 await connection.CloseAsync();
