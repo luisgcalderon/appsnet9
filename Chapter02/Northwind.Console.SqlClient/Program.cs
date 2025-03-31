@@ -105,10 +105,45 @@ if (!decimal.TryParse(priceText, out decimal price))
     return;
 }    
 SqlCommand command = connection.CreateCommand();
-command.CommandType = CommandType.Text;
-command.CommandText = "SELECT ProductId, ProductName, UnitPrice FROM Products"
-    + " WHERE UnitPrice >= @minimumPrice";
-command.Parameters.AddWithValue("minimumPrice", price);
+WriteLine("Execute command using:");
+WriteLine(" 1 - Text");
+WriteLine(" 2 - Stored Procedure");
+WriteLine();
+Write("Press a key: ");
+key = ReadKey().Key;
+WriteLine(); WriteLine();
+SqlParameter p1, p2 = new(), p3 = new();
+if (key is ConsoleKey.D1 or ConsoleKey.NumPad1)
+{
+    command.CommandType = CommandType.Text;
+    command.CommandText = "SELECT ProductId, ProductName, UnitPrice FROM Products"
+        + " WHERE UnitPrice >= @minimumPrice";
+    command.Parameters.AddWithValue("minimumPrice", price);
+}
+else if (key is ConsoleKey.D2 or ConsoleKey.NumPad2)
+{
+    command.CommandType = CommandType.StoredProcedure;
+    command.CommandText = "GetExpensiveProducts";
+    p1 = new()
+    {
+        ParameterName = "price",
+        SqlDbType = SqlDbType.Money,
+        SqlValue = price
+    };
+    p2 = new()
+    {
+        Direction = ParameterDirection.Output,
+        ParameterName = "count",
+        SqlDbType = SqlDbType.Int
+    };
+    p3 = new()
+    {
+        Direction = ParameterDirection.ReturnValue,
+        ParameterName = "rv",
+        SqlDbType = SqlDbType.Int
+    };
+    command.Parameters.AddRange(new[] { p1, p2, p3 });
+}
 SqlDataReader reader = await command.ExecuteReaderAsync();
 string horizontalLine = new string('-', 60);
 WriteLine(horizontalLine);
@@ -123,7 +158,8 @@ while (await reader.ReadAsync())
         await reader.GetFieldValueAsync<decimal>("UnitPrice"));
 }
 WriteLine(horizontalLine);
-await reader.CloseAsync();
 #endregion
 OutputStatistics(connection);
+await reader.CloseAsync();
+if (key is ConsoleKey)
 await connection.CloseAsync();
