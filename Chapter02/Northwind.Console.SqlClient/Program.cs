@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient; //To use SqlConnection and so on.
+﻿using Microsoft.Data.SqlClient;
+using System.Data; //To use SqlConnection and so on.
 ConfigureConsole();
 #region Set up the connection string builder
 SqlConnectionStringBuilder builder = new()
@@ -83,8 +84,9 @@ try
     WriteLine("Openning connection. Please wait up to {0} seconds...",
         builder.ConnectTimeout);
     WriteLine();
-    connection.Open();
+    await connection.OpenAsync();
     WriteLine($"SQL Server version: {connection.ServerVersion}");
+    connection.StatisticsEnabled = true;
 }
 catch (SqlException ex)
 {
@@ -93,4 +95,35 @@ catch (SqlException ex)
     return;
 }
 #endregion
-connection.Close();
+
+#region Products
+Write("Enter a unit price: ");
+string? priceText = ReadLine();
+if (!decimal.TryParse(priceText, out decimal price))
+{
+    WriteLine("You must enter a valid unit price.");
+    return;
+}    
+SqlCommand command = connection.CreateCommand();
+command.CommandType = CommandType.Text;
+command.CommandText = "SELECT ProductId, ProductName, UnitPrice FROM Products"
+    + " WHERE UnitPrice >= @minimumPrice";
+command.Parameters.AddWithValue("minimumPrice", price);
+SqlDataReader reader = await command.ExecuteReaderAsync();
+string horizontalLine = new string('-', 60);
+WriteLine(horizontalLine);
+WriteLine("| {0,5} | {1,-35} | {2,10} |",
+    arg0: "Id", arg1: "Name", arg2: "Price");
+WriteLine(horizontalLine);
+while (await reader.ReadAsync())
+{
+    WriteLine("| {0,5} | {1,-35} | {2,10:C} |",
+        await reader.GetFieldValueAsync<int>("ProductId"),
+        await reader.GetFieldValueAsync<string>("ProductName"),
+        await reader.GetFieldValueAsync<decimal>("UnitPrice"));
+}
+WriteLine(horizontalLine);
+await reader.CloseAsync();
+#endregion
+OutputStatistics(connection);
+await connection.CloseAsync();
