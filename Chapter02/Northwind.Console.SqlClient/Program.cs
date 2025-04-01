@@ -3,7 +3,8 @@ using System.Text.Json;
 using static System.Environment;
 using static System.IO.Path;
 using Microsoft.Data.SqlClient;
-using System.Data; //To use SqlConnection and so on.
+using System.Data;
+using Dapper; //To use SqlConnection and so on.
 ConfigureConsole();
 #region Set up the connection string builder
 SqlConnectionStringBuilder builder = new()
@@ -200,3 +201,31 @@ if (key is ConsoleKey.D2 or ConsoleKey.NumPad2)
     WriteLine($"Return value: {p3.Value}");
 }
 await connection.CloseAsync();
+
+#region Supplier
+WriteLineInColor("Using Dapper", ConsoleColor.DarkGreen);
+connection.ResetStatistics();
+IEnumerable<Supplier> suppliers = connection.Query<Supplier>(
+    sql: "SELECT * FROM Suppliers WHERE Country=@Country",
+    param: new { Country = "Germany" });
+foreach (Supplier s in suppliers)
+{
+    WriteLine("{0}: {1}, {2}, {3}",
+        s.SupplierId, s.CompanyName, s.City, s.Country);
+}
+WriteLineInColor(JsonSerializer.Serialize(suppliers), ConsoleColor.Green);
+OutputStatistics(connection);
+#endregion
+
+#region Dapper ExecuteSP
+IEnumerable<Product> productsFromDapper = connection.Query<Product>(sql: "GetExpensiveProducts",
+    param: new { price = 100M, count = 0 },
+    commandType: CommandType.StoredProcedure);
+foreach (Product p in productsFromDapper)
+{
+    WriteLine("{0}: {1}, {2}",
+        p.ProductId, p.ProductName, p.UnitPrice);
+}
+WriteLineInColor(JsonSerializer.Serialize(productsFromDapper), ConsoleColor.Green);
+
+#endregion
