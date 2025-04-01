@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using Northwind.Models;
+using System.Text.Json;
 using static System.Environment;
 using static System.IO.Path;
 using Microsoft.Data.SqlClient;
@@ -155,12 +156,20 @@ WriteLine("| {0,5} | {1,-35} | {2,10} |",
 WriteLine(horizontalLine);
 // Define a file path to wtite to.
 string jsonPath = Combine(CurrentDirectory, "product.json");
+List<Product> products = new(capacity: 77);
 await using (FileStream jsonStream = File.Create(jsonPath))
 {
     Utf8JsonWriter jsonWriter = new(jsonStream);
     jsonWriter.WriteStartArray();
     while (await reader.ReadAsync())
     {
+        Product product = new()
+        {
+            ProductId = await reader.GetFieldValueAsync<int>("ProductId"),
+            ProductName = await reader.GetFieldValueAsync<string>("ProductName"),
+            UnitPrice = await reader.GetFieldValueAsync<decimal>("UnitPrice")
+        };
+        products.Add(product);
         WriteLine("| {0,5} | {1,-35} | {2,10:C} |",
             await reader.GetFieldValueAsync<int>("ProductId"),
             await reader.GetFieldValueAsync<string>("ProductName"),
@@ -182,6 +191,8 @@ WriteLine(horizontalLine);
 WriteLineInColor($"Written to: {jsonPath}", ConsoleColor.DarkGreen);
 #endregion
 OutputStatistics(connection);
+WriteLineInColor(JsonSerializer.Serialize(products),
+    ConsoleColor.Magenta);
 await reader.CloseAsync();
 if (key is ConsoleKey.D2 or ConsoleKey.NumPad2)
 {
