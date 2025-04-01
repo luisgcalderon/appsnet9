@@ -153,14 +153,33 @@ WriteLine(horizontalLine);
 WriteLine("| {0,5} | {1,-35} | {2,10} |",
     arg0: "Id", arg1: "Name", arg2: "Price");
 WriteLine(horizontalLine);
-while (await reader.ReadAsync())
+// Define a file path to wtite to.
+string jsonPath = Combine(CurrentDirectory, "product.json");
+await using (FileStream jsonStream = File.Create(jsonPath))
 {
-    WriteLine("| {0,5} | {1,-35} | {2,10:C} |",
-        await reader.GetFieldValueAsync<int>("ProductId"),
-        await reader.GetFieldValueAsync<string>("ProductName"),
-        await reader.GetFieldValueAsync<decimal>("UnitPrice"));
+    Utf8JsonWriter jsonWriter = new(jsonStream);
+    jsonWriter.WriteStartArray();
+    while (await reader.ReadAsync())
+    {
+        WriteLine("| {0,5} | {1,-35} | {2,10:C} |",
+            await reader.GetFieldValueAsync<int>("ProductId"),
+            await reader.GetFieldValueAsync<string>("ProductName"),
+            await reader.GetFieldValueAsync<decimal>("UnitPrice"));
+        jsonWriter.WriteStartObject();
+        jsonWriter.WriteNumber("productId",
+            await reader.GetFieldValueAsync<int>("ProductId"));
+        jsonWriter.WriteString("productName",
+            await reader.GetFieldValueAsync<string>("ProductName"));
+        jsonWriter.WriteNumber("unitPrice",
+            await reader.GetFieldValueAsync<decimal>("UnitPrice"));
+        jsonWriter.WriteEndObject();
+    }
+    jsonWriter.WriteEndArray();
+    jsonWriter.Flush();
+    jsonStream.Close();
 }
 WriteLine(horizontalLine);
+WriteLineInColor($"Written to: {jsonPath}", ConsoleColor.DarkGreen);
 #endregion
 OutputStatistics(connection);
 await reader.CloseAsync();
